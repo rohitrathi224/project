@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Rental Car System</title>
+  <style>
+    body { font-family: Arial; margin: 40px; }
+    .car, .rental { border: 1px solid #ccc; padding: 10px; margin: 10px; }
+    .available { color: black; }
+    .unavailable { color: white; }
+  </style>
+</head>
+<body>
+  <h1>Rental Car System</h1>
+  <div id="cars"></div>
+
+  <h2>Add Car</h2>
+  <form id="carForm">
+    <input name="make" placeholder="Make" required>
+    <input name="model" placeholder="Model" required>
+    <input name="year" type="number" placeholder="Year" required>
+    <input name="pricePerDay" type="number" placeholder="Price/Day" required>
+    <button>Add Car</button>
+  </form>
+
+  <script>
+    const carsDiv = document.getElementById("cars");
+    const carForm = document.getElementById("carForm");
+
+    async function loadCars() {
+      const res = await fetch("http://localhost:5000/api/cars");
+      const cars = await res.json();
+      carsDiv.innerHTML = "";
+      cars.forEach(car => {
+        const div = document.createElement("div");
+        div.className = "car";
+        div.innerHTML = `
+          <b>${car.make} ${car.model} (${car.year})</b><br>
+          $${car.pricePerDay}/day<br>
+          Status: <span class="${car.available ? "available" : "unavailable"}">
+            ${car.available ? "Available" : "Rented"}
+          </span>
+          <br>
+          ${car.available ? `<button onclick="rentCar('${car._id}')">Rent</button>` : ""}
+          <button onclick="deleteCar('${car._id}')">Delete</button>
+        `;
+        carsDiv.appendChild(div);
+      });
+    }
+
+    carForm.onsubmit = async (e) => {
+      e.preventDefault();
+      const formData = new FormData(carForm);
+      const data = Object.fromEntries(formData.entries());
+      await fetch("http://localhost:5000/api/cars", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+      carForm.reset();
+      loadCars();
+    };
+
+    async function deleteCar(id) {
+      await fetch(`http://localhost:5000/api/cars/${id}`, { method: "DELETE" });
+      loadCars();
+    }
+
+    async function rentCar(id) {
+      const customerName = prompt("Customer Name?");
+      const startDate = prompt("Start Date (YYYY-MM-DD)?");
+      const endDate = prompt("End Date (YYYY-MM-DD)?");
+      await fetch("http://localhost:5000/api/rentals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ customerName, carId: id, startDate, endDate })
+      });
+      loadCars();
+    }
+
+    loadCars();
+  </script>
+</body>
+</html>
